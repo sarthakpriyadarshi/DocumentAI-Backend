@@ -6,8 +6,12 @@ from config import VECTOR_STORE_PATH
 import config
 import logging
 
+# Use the custom app logger
+app_logger = logging.getLogger("DocumentAI")
+app_logger.setLevel(logging.INFO)
+
 logging.getLogger("chromadb").setLevel(logging.ERROR)
-logger = logging.getLogger(__name__)
+
 # Initialize ChromaDB Persistent Client and Collection with explicit HNSW config
 client = chromadb.PersistentClient(path=VECTOR_STORE_PATH)
 collection = client.get_or_create_collection(
@@ -47,7 +51,7 @@ def normalize_text(text):
     return re.sub(r'[^\w\s]', '', text)
 
 def add_chunks_to_vector_store(session_id: str, chunks: list):
-    logger.info("[VECTOR STORE]: Adding Chunks to Vector Store Started")
+    app_logger.info("[VECTOR STORE]: Adding Chunks to Vector Store Started")
     if all(isinstance(chunk, str) for chunk in chunks):
         chunks = [{"text": chunk, "source": "unknown", "type": "Unknown"} for chunk in chunks]
     
@@ -66,17 +70,17 @@ def add_chunks_to_vector_store(session_id: str, chunks: list):
         })
     ids = [f"{session_id}_{i}" for i in range(len(chunks))]
     preview = f"{documents[:3]}, ..." if len(chunks) > 3 else str(documents[:3])
-    logger.info("[VECTOR STORE]: Vector Stored Chunks Preview:", preview)
+    app_logger.info("[VECTOR STORE]: Vector Stored Chunks Preview: %s", preview)
     collection.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
 def query_chunks(session_id: str, query: str, n_results: int = 5):
-    logger.info("[VECTOR STORE]: Querying Chunks")
-    logger.info(f"I[VECTOR STORE]: Session ID: {session_id}, Query: {query}, N Results: {n_results}")
+    app_logger.info("[VECTOR STORE]: Querying Chunks")
+    app_logger.info("[VECTOR STORE]: Session ID: %s, Query: %s, N Results: %d", session_id, query, n_results)
     
     # Remove stop words from query
     all_words = query.lower().split()
     all_query_terms = [word for word in all_words if word not in stop_words]
-    logger.info("[VECTOR STORE]: Query Terms after removing stop words:", all_query_terms)
+    app_logger.info("[VECTOR STORE]: Query Terms after removing stop words: %s", all_query_terms)
     
     # Build a query string for embedding using only the filtered query terms
     query_for_embedding = ' '.join(all_query_terms)
@@ -87,7 +91,7 @@ def query_chunks(session_id: str, query: str, n_results: int = 5):
         where={"session_id": session_id},
         include=["documents", "metadatas"]
     )
-    
+    app_logger.info("[VECTOR STORE]: Query Results: %s", results)
     # Build raw_chunks list from query results
     raw_chunks = [
         {
@@ -170,10 +174,11 @@ def query_chunks(session_id: str, query: str, n_results: int = 5):
     # Select top n_results from merged_results
     top_chunks = merged_results[:n_results]
     
-    logger.info("[VECTOR STORE]: Top Chunks:")
+    app_logger.info("[VECTOR STORE]: Top Chunks:")
     for idx, chunk in enumerate(top_chunks):
         score = relevance_score(chunk) if chunk.get('type') != 'Merged Title+Text' else "Merged"
-        logger.info(f"[VECTOR STORE]: Rank {idx+1}: Chunk: {chunk['chunk'][:50]}..., Type: {chunk['type']}, Position: {chunk['position']}, Score: {score}")
+        app_logger.info("[VECTOR STORE]: Rank %d: Chunk: %s..., Type: %s, Position: %d, Score: %s", 
+                        idx+1, chunk['chunk'][:50], chunk['type'], chunk['position'], score)
     
     return top_chunks
 

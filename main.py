@@ -5,7 +5,27 @@ from pydantic import BaseModel
 import os
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# Silence root logger and disable propagation
+# logging.getLogger().setLevel(logging.CRITICAL)  # Root logger only logs CRITICAL
+logging.getLogger().propagate = False  # Stop root from passing logs to handlers
+logging.getLogger().handlers = []  # Remove any default handlers
+
+# Silence specific library loggers
+logging.getLogger("uvicorn").setLevel(logging.INFO)
+logging.getLogger("fastapi").setLevel(logging.INFO)
+logging.getLogger("sentence_transformers").setLevel(logging.CRITICAL)
+logging.getLogger("chromadb").setLevel(logging.CRITICAL)
+logging.getLogger("langchain").setLevel(logging.CRITICAL)
+
+# Create a custom logger for your application
+app_logger = logging.getLogger("DocumentAI")
+app_logger.setLevel(logging.INFO)  # Your logs at INFO level
+handler = logging.StreamHandler()  # Output to console
+handler.setFormatter(logging.Formatter("%(levelname)s: \t  %(message)s"))  # Match Uvicorn style
+app_logger.addHandler(handler)
+app_logger.propagate = False  # Prevent logs from going to root
+
+
 from processing import get_file_type
 from session import create_session, is_valid_session
 # Instead of the old ask_ollama, use the new LLM instance from llm.py
@@ -57,9 +77,12 @@ async def upload_file(file: UploadFile = File(...)):
         # Now add the chunks to the LangChain vector store.
         add_chunks_to_vector_store(session_id, chunks)
     elif file_type == "image":
-        image_agent.handle_image(temp_path, session_id)
+        chunks, session_id = image_agent.handle_image(temp_path, session_id)
+        add_chunks_to_vector_store(session_id, chunks)
+        
     elif file_type == "audio":
-        audio_agent.handle_audio(temp_path, session_id)
+        chunks, session_id = audio_agent.handle_audio(temp_path, session_id)
+        add_chunks_to_vector_store(session_id, chunks)
     else:
         os.remove(temp_path)
         raise HTTPException(status_code=400, detail="Unsupported file type.")
@@ -67,7 +90,6 @@ async def upload_file(file: UploadFile = File(...)):
     os.remove(temp_path)
     return {"session_id": session_id}
 
-# Build the RetrievalQA chain using the new Ollama LLM and LangChain Chroma.
 # Instantiate the vector store once.
 vectorstore = get_vectorstore()
 retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
