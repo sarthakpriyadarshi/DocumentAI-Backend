@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+unstructured[all-docs,image,pytesseract,pdf]
+chromadb
+sentence-transformers
+python-multipart
+whisper
+ollama
+pydub
+ffmpeg-python
+langchain
+langchain-community
+langchain-chroma
+langchain-huggingface
