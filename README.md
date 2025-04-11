@@ -1,4 +1,4 @@
-![Logo]()
+![Logo](https://github.com/sarthakpriyadarshi/DocumentAI-Backend/blob/main/assets/Document%20AI%20-%20Banner.png?raw=true)
 
 # Document AI - Backend
 
