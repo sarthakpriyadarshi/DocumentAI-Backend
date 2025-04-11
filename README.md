@@ -2,11 +2,22 @@
 
 # Document AI - Backend
 
-A brief description of what this project does and who it's for
+The backend tool for analyzing PDF, Docx, TXT, CSV, Audio, Image File and using Langchain Agentic AI using Llama 3.2 to answer question in NLP based on top chunks retrival making using of input sanitization of stop words.
 
 ## Deployment
 
 To deploy this project run
+
+## Docker
+
+### Pull Docker Image
+```bash
+docker pull sarthakpriyadarshi/document-ai-backend:latest
+```
+### Run Docker Image
+```bash
+docker run -p 8000:8000 sarthakpriyadarshi/document-ai-backend
+```
 
 ## 🧰 Prerequisites
 
