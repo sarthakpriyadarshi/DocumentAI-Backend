@@ -1,6 +1,7 @@
 # main.py
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import logging
@@ -55,6 +56,18 @@ prompt = PromptTemplate(
 
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change this to your frontend URL in production, e.g. ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/healthcare")
+async def healthcare():
+    return {"message": "success"}
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
