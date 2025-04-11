@@ -3,17 +3,19 @@
 import os
 import logging
 from unstructured.partition.auto import partition
-from vector_store import add_chunks_to_vector_store
 
-# Suppress verbose logs from unstructured dependencies
+# Use the custom app logger
+app_logger = logging.getLogger("DocumentAI")
+app_logger.setLevel(logging.INFO)
+
+# Suppress verbose logs from dependencies
 logging.getLogger("unstructured").setLevel(logging.ERROR)
-logging.getLogger("pdfminer").setLevel(logging.ERROR)  # If pdfminer is used
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("pypdf").setLevel(logging.ERROR)
-
-logger = logging.getLogger(__name__)
+logging.getLogger("pikepdf").setLevel(logging.ERROR)
 
 def handle_document(file_path, session_id):
-    logger.info("Started Document Agent:")
+    app_logger.info("Started Document Agent:")
 
     # Partition the document with unstructured.io; this returns a list of element objects.
     elements = partition(filename=file_path)
@@ -35,7 +37,7 @@ def handle_document(file_path, session_id):
                     # Merge the metadata into the chunk dictionary.
                     chunk_data.update(el.metadata.to_dict())
                 except Exception as e:
-                    logger.warning("Could not extract metadata for element: %s", e)
+                    app_logger.warning("Could not extract metadata for element: %s", e)
             chunks.append(chunk_data)
     
     # Print a preview of the resulting chunks.
@@ -43,8 +45,7 @@ def handle_document(file_path, session_id):
         preview = f"{chunks[:1]}, ..."
     else:
         preview = str(chunks[:10])
-    logger.info("[Document Agent]: Partitioned Document Agent Elements: %s", preview)
+    app_logger.info("[Document Agent]: Partitioned Document Agent Elements: %s", preview)
     
     # Send the full chunks with metadata to the vector store.
-    add_chunks_to_vector_store(session_id, chunks)
     return chunks, session_id

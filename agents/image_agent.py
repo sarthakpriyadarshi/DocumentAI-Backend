@@ -1,26 +1,37 @@
-# agents/image_agent.py
-
-from unstructured.partition.image import partition_image
-from vector_store import add_chunks_to_vector_store
 import os
+import logging
+from unstructured.partition.image import partition_image
+
+app_logger = logging.getLogger("DocumentAI")
+app_logger.setLevel(logging.INFO)
 
 def handle_image(file_path, session_id):
-    # Partition the image file with unstructured.io.
+    app_logger.info("Started Image Agent:")
+    
+    # Partition the image file
     elements = partition_image(filename=file_path)
-    # Build a list of chunks that preserves text and metadata.
+    
+    # Build chunks as a list of dictionaries
     chunks = []
     for el in elements:
-        if el.text:
+        if hasattr(el, "text") and el.text:
             chunk_data = {
                 "text": el.text,
                 "source": os.path.basename(file_path),
                 "type": el.__class__.__name__
             }
-            # Optionally, if image elements have metadata, try to include it.
+            # Handle metadata safely
             if hasattr(el, "metadata"):
                 try:
-                    chunk_data.update(el.metadata.to_dict())
+                    metadata = el.metadata.to_dict()
+                    # Sanitize metadata: convert non-scalar values to strings
+                    for key, value in metadata.items():
+                        if not isinstance(value, (str, int, float, bool)):
+                            metadata[key] = str(value)
+                    chunk_data.update(metadata)
                 except Exception as e:
-                    print(f"WARNING: Could not extract metadata for image element: {e}")
+                    app_logger.warning("Could not extract metadata for image element: %s", e)
             chunks.append(chunk_data)
-    add_chunks_to_vector_store(session_id, chunks)
+    
+    app_logger.info("[Image Agent]: Partitioned Image Elements: %s", chunks[:1])
+    return chunks, session_id
